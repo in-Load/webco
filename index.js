@@ -35,9 +35,9 @@ class BaseComponent extends HTMLElement {
     /**
      * Creates a new BaseComponent instance with Shadow DOM.
      */
-    constructor() {
+    constructor(useShadow=true) {
         super();
-        this.attachShadow({ mode: "open" });
+        if (useShadow) this.attachShadow({ mode: "open" });
     }
 
     /**
