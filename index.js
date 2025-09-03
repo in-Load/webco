@@ -35,7 +35,7 @@ class BaseComponent extends HTMLElement {
     /**
      * Creates a new BaseComponent instance with Shadow DOM.
      */
-    constructor() {
+    constructor(){
         super();
         this.attachShadow({mode:"open"});
     }
@@ -43,7 +43,7 @@ class BaseComponent extends HTMLElement {
     /**
      * Called when the component is added to the DOM.
      */
-    connectedCallback() {
+    connectedCallback(){
         this.loadTemplate()
             .then(() => this.render())
             .catch(err => console.error("Template loading failed:", err));
@@ -52,7 +52,7 @@ class BaseComponent extends HTMLElement {
     /**
      * Called when the component is removed from the DOM.
      */
-    disconnectedCallback() {
+    disconnectedCallback(){
         // Optional cleanup logic
     }
 
@@ -61,7 +61,7 @@ class BaseComponent extends HTMLElement {
      *
      * @param {any} value - The data object assigned to this component.
      */
-    set data(value) {
+    set data(value){
         this._data = value;
         this.render();
     }
@@ -71,9 +71,7 @@ class BaseComponent extends HTMLElement {
      *
      * @returns {any} The current data stored in this component.
      */
-    get data() {
-        return this._data;
-    }
+    get data(){ return this._data; }
 
     /**
      * Load and attach a template to the Shadow DOM.
@@ -85,39 +83,39 @@ class BaseComponent extends HTMLElement {
      *
      * @returns {Promise<void>}
      */
-    async loadTemplate() {
+    async loadTemplate(){
         let templateContent = null;
 
         // 1. Direct HTMLTemplateElement
-        if (this.templateElement instanceof HTMLTemplateElement) {
+        if(this.templateElement instanceof HTMLTemplateElement){
             templateContent = this.templateElement.content.cloneNode(true);
         }
 
         // 2. Template ID in DOM
-        else if (this.templateId) {
+        else if(this.templateId){
             const tpl = document.getElementById(this.templateId);
-            if (tpl instanceof HTMLTemplateElement) {
+            if(tpl instanceof HTMLTemplateElement){
                 templateContent = tpl.content.cloneNode(true);
             }
         }
 
         // 3. Remote URL
-        else if (this.templateUrl) {
-            try {
+        else if(this.templateUrl){
+            try{
                 const response = await fetch(this.templateUrl);
-                if (response.ok) {
+                if(response.ok){
                     const html = await response.text();
                     const tpl = document.createElement("template");
                     tpl.innerHTML = html;
                     templateContent = tpl.content.cloneNode(true);
                 }
-            } catch (err) {
+            }catch(err){
                 console.error("Failed to fetch template:", err);
             }
         }
 
         // 4. Fallback template
-        if (!templateContent) {
+        if(!templateContent){
             const tpl = document.createElement("template");
             tpl.innerHTML = `<div>BaseComponent initialized.</div>`;
             templateContent = tpl.content.cloneNode(true);
@@ -132,8 +130,7 @@ class BaseComponent extends HTMLElement {
      * Render logic for updating the UI when data changes.
      * Override this method in subclasses.
      */
-    render() {
-        // Example implementation (empty by default)
-        // Subclasses should override this method
+    render(){
+        throw new Error(`${this.tagName.toLowerCase()} render() not implemented`);
     }
 }
