@@ -1,83 +1,139 @@
-class BaseComponent extends HTMLElement {
-	/**
-	* Creates an instance of BaseComponent and attaches an open shadow DOM.
-	*/
-	constructor() {
-		super();
-		/**
-		* Shadow root of the component to encapsulate styles and DOM.
-		* @type {ShadowRoot}
-		*/
-		this.shadowRoot = this.attachShadow({mode:"open"});
-		
-		// Custom initialization method
-		this.initialize();
-	}
-	
-	/**
-	* Initialization method that child components can override.
-	* Set initial state or configure properties here.
-	*/
-	initialize() {
-	  // Example: this.shadowRoot.innerHTML = `<style>p{color:red;}</style><p>Hello</p>`;
-	}
-	
-	/**
-	* Called when an observed attribute changes.
-	* Child components can override this method.
-	* @param {string} name - Attribute name
-	* @param {string | null} oldValue - Previous value
-	* @param {string | null} newValue - New value
-	*/
-	attributeChangedCallback(name, oldValue, newValue) {
-		console.log(`Attribute "${name}" changed from "${oldValue}" to "${newValue}"`);
-	}
-	
-	/**
-	* Returns the list of attributes to observe.
-	* @returns {string[]} Array of attribute names to observe
-	*/
-	static get observedAttributes() {
-		return [];
-	}
-	
-	/**
-	* Called when the component is added to the DOM.
-	*/
-	connectedCallback() {
-		console.log(`${this.tagName.toLowerCase()} added to page.`);
-	}
-	
-	/**
-	* Called when the component is removed from the DOM.
-	*/
-	disconnectedCallback() {
-		console.log(`${this.tagName.toLowerCase()} removed from page.`);
-	}
-	
-	/**
-	* Helper method to dispatch a custom event easily.
-	* @param {string} eventName - Name of the event
-	* @param {any} detail - Data to pass with the event
-	*/
-	emit(eventName, detail = {}) {
-		this.dispatchEvent(new CustomEvent(eventName, {
-			detail,
-			bubbles: true,
-			composed: true
-		}));
-	}
-	
-	/**
-	* Defines the custom element in the browser's Custom Elements registry.
-	* @param {string} tagName - The tag name to register (must include a hyphen)
-	*/
-	static define(tagName) {
-		if (!customElements.get(tagName)) {
-			customElements.define(tagName, this);
-			console.log(`Custom element <${tagName}> defined.`);
-		} else {
-			console.warn(`Custom element <${tagName}> is already defined.`);
-		}
-	}
+/**
+ * BaseComponent
+ *
+ * Abstract base class for building reusable Web Components with
+ * support for dynamic data binding and flexible template loading.
+ *
+ * Usage:
+ *  1. Extend this class and define your own custom element.
+ *  2. Provide data via the `data` property (e.g., `element.data = {...}`).
+ *  3. Provide a template either:
+ *      - Directly as a HTMLTemplateElement,
+ *      - By referencing a template ID in the DOM,
+ *      - By fetching from a remote URL,
+ *      - Or let it fall back to a default template.
+ *  4. Override the `render()` method in subclasses to update the UI
+ *     whenever new data is assigned.
+ *
+ * Example:
+ *  class MyCard extends BaseComponent {
+ *      render() {
+ *          const root = this.shadowRoot;
+ *          if (!root) return;
+ *          root.querySelector(".title").textContent = this._data?.title ?? "Untitled";
+ *      }
+ *  }
+ *  customElements.define("my-card", MyCard);
+ */
+export class BaseComponent extends HTMLElement {
+    /**
+     * @type {any} Holds the component's dynamic data
+     * @protected
+     */
+    _data = null;
+
+    /**
+     * Creates a new BaseComponent instance with Shadow DOM.
+     */
+    constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+    }
+
+    /**
+     * Called when the component is added to the DOM.
+     */
+    connectedCallback() {
+        this.loadTemplate()
+            .then(() => this.render())
+            .catch(err => console.error("Template loading failed:", err));
+    }
+
+    /**
+     * Called when the component is removed from the DOM.
+     */
+    disconnectedCallback() {
+        // Optional cleanup logic
+    }
+
+    /**
+     * Assign data to the component. Automatically triggers render().
+     *
+     * @param {any} value - The data object assigned to this component.
+     */
+    set data(value) {
+        this._data = value;
+        this.render();
+    }
+
+    /**
+     * Get the current data.
+     *
+     * @returns {any} The current data stored in this component.
+     */
+    get data() {
+        return this._data;
+    }
+
+    /**
+     * Load and attach a template to the Shadow DOM.
+     * Supports:
+     *  - Direct HTMLTemplateElement via `this.templateElement`
+     *  - Template ID via `this.templateId`
+     *  - Remote URL via `this.templateUrl`
+     *  - Default fallback template
+     *
+     * @returns {Promise<void>}
+     */
+    async loadTemplate() {
+        let templateContent = null;
+
+        // 1. Direct HTMLTemplateElement
+        if (this.templateElement instanceof HTMLTemplateElement) {
+            templateContent = this.templateElement.content.cloneNode(true);
+        }
+
+        // 2. Template ID in DOM
+        else if (this.templateId) {
+            const tpl = document.getElementById(this.templateId);
+            if (tpl instanceof HTMLTemplateElement) {
+                templateContent = tpl.content.cloneNode(true);
+            }
+        }
+
+        // 3. Remote URL
+        else if (this.templateUrl) {
+            try {
+                const response = await fetch(this.templateUrl);
+                if (response.ok) {
+                    const html = await response.text();
+                    const tpl = document.createElement("template");
+                    tpl.innerHTML = html;
+                    templateContent = tpl.content.cloneNode(true);
+                }
+            } catch (err) {
+                console.error("Failed to fetch template:", err);
+            }
+        }
+
+        // 4. Fallback template
+        if (!templateContent) {
+            const tpl = document.createElement("template");
+            tpl.innerHTML = `<div>BaseComponent initialized.</div>`;
+            templateContent = tpl.content.cloneNode(true);
+        }
+
+        // Clear Shadow DOM before injecting
+        this.shadowRoot.innerHTML = "";
+        this.shadowRoot.appendChild(templateContent);
+    }
+
+    /**
+     * Render logic for updating the UI when data changes.
+     * Override this method in subclasses.
+     */
+    render() {
+        // Example implementation (empty by default)
+        // Subclasses should override this method
+    }
 }
