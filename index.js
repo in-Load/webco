@@ -25,7 +25,7 @@
  *  }
  *  customElements.define("my-card", MyCard);
  */
-export class BaseComponent extends HTMLElement {
+class BaseComponent extends HTMLElement {
     /**
      * @type {any} Holds the component's dynamic data
      * @protected
