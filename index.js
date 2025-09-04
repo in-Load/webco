@@ -2,28 +2,7 @@
  * BaseComponent
  *
  * Abstract base class for building reusable Web Components with
- * support for dynamic data binding and flexible template loading.
- *
- * Usage:
- *  1. Extend this class and define your own custom element.
- *  2. Provide data via the `data` property (e.g., `element.data = {...}`).
- *  3. Provide a template either:
- *      - Directly as a HTMLTemplateElement,
- *      - By referencing a template ID in the DOM,
- *      - By fetching from a remote URL,
- *      - Or let it fall back to a default template.
- *  4. Override the `render()` method in subclasses to update the UI
- *     whenever new data is assigned.
- *
- * Example:
- *  class MyCard extends BaseComponent {
- *      render() {
- *          const root = this.shadowRoot;
- *          if (!root) return;
- *          root.querySelector(".title").textContent = this._data?.title ?? "Untitled";
- *      }
- *  }
- *  customElements.define("my-card", MyCard);
+ * optional Shadow DOM isolation.
  */
 class BaseComponent extends HTMLElement {
     /**
@@ -33,17 +12,29 @@ class BaseComponent extends HTMLElement {
     _data = null;
 
     /**
-     * Creates a new BaseComponent instance with Shadow DOM.
+     * Creates a new BaseComponent instance.
+     *
+     * @param {boolean} [useShadow=true] - Whether to attach Shadow DOM.
      */
-    constructor(){
+    constructor(useShadow = true) {
         super();
-        this.attachShadow({mode:"open"});
+        this._useShadow = useShadow;
+        if (this._useShadow) {
+            this.attachShadow({ mode: "open" });
+        }
+    }
+
+    /**
+     * Root to render into (shadowRoot if isolated, otherwise this).
+     */
+    get root() {
+        return this._useShadow ? this.shadowRoot : this;
     }
 
     /**
      * Called when the component is added to the DOM.
      */
-    connectedCallback(){
+    connectedCallback() {
         this.loadTemplate()
             .then(() => this.render())
             .catch(err => console.error("Template loading failed:", err));
@@ -52,85 +43,64 @@ class BaseComponent extends HTMLElement {
     /**
      * Called when the component is removed from the DOM.
      */
-    disconnectedCallback(){
-        // Optional cleanup logic
+    disconnectedCallback() {
+        // Optional cleanup
     }
 
     /**
      * Assign data to the component. Automatically triggers render().
-     *
-     * @param {any} value - The data object assigned to this component.
      */
-    set data(value){
+    set data(value) {
         this._data = value;
         this.render();
     }
 
-    /**
-     * Get the current data.
-     *
-     * @returns {any} The current data stored in this component.
-     */
-    get data(){ return this._data; }
+    get data() {
+        return this._data;
+    }
 
     /**
-     * Load and attach a template to the Shadow DOM.
-     * Supports:
-     *  - Direct HTMLTemplateElement via `this.templateElement`
-     *  - Template ID via `this.templateId`
-     *  - Remote URL via `this.templateUrl`
-     *  - Default fallback template
-     *
-     * @returns {Promise<void>}
+     * Load and attach a template.
      */
-    async loadTemplate(){
+    async loadTemplate() {
         let templateContent = null;
 
-        // 1. Direct HTMLTemplateElement
-        if(this.templateElement instanceof HTMLTemplateElement){
+        if (this.templateElement instanceof HTMLTemplateElement) {
             templateContent = this.templateElement.content.cloneNode(true);
-        }
-
-        // 2. Template ID in DOM
-        else if(this.templateId){
+        } else if (this.templateId) {
             const tpl = document.getElementById(this.templateId);
-            if(tpl instanceof HTMLTemplateElement){
+            if (tpl instanceof HTMLTemplateElement) {
                 templateContent = tpl.content.cloneNode(true);
             }
-        }
-
-        // 3. Remote URL
-        else if(this.templateUrl){
-            try{
+        } else if (this.templateUrl) {
+            try {
                 const response = await fetch(this.templateUrl);
-                if(response.ok){
+                if (response.ok) {
                     const html = await response.text();
                     const tpl = document.createElement("template");
                     tpl.innerHTML = html;
                     templateContent = tpl.content.cloneNode(true);
                 }
-            }catch(err){
+            } catch (err) {
                 console.error("Failed to fetch template:", err);
             }
         }
 
-        // 4. Fallback template
-        if(!templateContent){
+        if (!templateContent) {
             const tpl = document.createElement("template");
             tpl.innerHTML = `<div>BaseComponent initialized.</div>`;
             templateContent = tpl.content.cloneNode(true);
         }
 
-        // Clear Shadow DOM before injecting
-        this.shadowRoot.innerHTML = "";
-        this.shadowRoot.appendChild(templateContent);
+        // inject in root
+        this.root.innerHTML = "";
+        this.root.appendChild(templateContent);
     }
 
     /**
-     * Render logic for updating the UI when data changes.
-     * Override this method in subclasses.
+     * Render logic (to be overridden).
      */
-    render(){
+    render() {
         throw new Error(`${this.tagName.toLowerCase()} render() not implemented`);
     }
 }
